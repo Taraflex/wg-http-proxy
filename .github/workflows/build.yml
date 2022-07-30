@@ -3,10 +3,10 @@ name: binary release
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
 
 jobs:
   build-linux:
@@ -61,7 +61,36 @@ jobs:
           allowUpdates: true
           artifactErrorsFailBuild: true
           omitBody: true
-          removeArtifacts: true
+          removeArtifacts: false
+          artifacts: "wg-http-proxy*"
+          omitName: true
+          tag: "latest"
+          token: "${{ secrets.GITHUB_TOKEN }}"
+
+  build-win:
+
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18.4
+          cache: true
+
+      - name: Build
+        run: go build -ldflags="-w -s" -o wg-http-proxy.exe
+
+      - name: Release
+        uses: "ncipollo/release-action@v1.8.5"
+        with:
+          allowUpdates: true
+          artifactErrorsFailBuild: true
+          omitBody: true
+          removeArtifacts: false
           artifacts: "wg-http-proxy*"
           omitName: true
           tag: "latest"
