@@ -1,4 +1,4 @@
-module github.com/shimberger/wg-http-proxy
+module github.com/Taraflex/wg-http-proxy
 
 go 1.18
 
