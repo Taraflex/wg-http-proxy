@@ -32,7 +32,6 @@ jobs:
           allowUpdates: true
           artifactErrorsFailBuild: true
           omitBody: true
-          removeArtifacts: true
           artifacts: "wg-http-proxy*"
           omitName: true
           tag: "latest"
@@ -61,7 +60,6 @@ jobs:
           allowUpdates: true
           artifactErrorsFailBuild: true
           omitBody: true
-          removeArtifacts: false
           artifacts: "wg-http-proxy*"
           omitName: true
           tag: "latest"
@@ -90,7 +88,6 @@ jobs:
           allowUpdates: true
           artifactErrorsFailBuild: true
           omitBody: true
-          removeArtifacts: false
           artifacts: "wg-http-proxy*"
           omitName: true
           tag: "latest"
