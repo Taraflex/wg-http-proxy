@@ -32,7 +32,7 @@ jobs:
           removeArtifacts: true
           artifactErrorsFailBuild: true
           omitBody: true
-          artifacts: '*wg-http-proxy*''
+          artifacts: '*wg-http-proxy*'
           omitName: true
           tag: latest
           token: "${{ secrets.GITHUB_TOKEN }}"
