@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -19,9 +18,7 @@ import (
 	"gopkg.in/ini.v1"
 )
 
-//todo github release and autobuild
-
-func MustParseCIDR(s string) netip.Addr {
+func mustParseCIDR(s string) netip.Addr {
 	ip, _, err := net.ParseCIDR(s)
 	if err != nil {
 		panic(err)
@@ -125,13 +122,12 @@ func main() {
 		log.Panicf("Fail to load file: %v", err)
 	}
 
-	fmt.Printf("%+v\n", *verbose)
 	//ip, _, err := net.ParseCIDR(cfg.Address[0])
 	//fmt.Printf("%+v\n", ip)
 
 	log.Printf("Creating TUN")
 
-	tun, tnet, err := netstack.CreateNetTUN(mapA(withoutEmpty(cfg.Address), MustParseCIDR), mapA(withoutEmpty(cfg.DNS), netip.MustParseAddr), 1420)
+	tun, tnet, err := netstack.CreateNetTUN(mapA(withoutEmpty(cfg.Address), mustParseCIDR), mapA(withoutEmpty(cfg.DNS), netip.MustParseAddr), 1420)
 	if err != nil {
 		log.Panicf("Error creating TUN '%v'", err)
 	}
