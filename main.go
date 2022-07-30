@@ -3,76 +3,146 @@ package main
 import (
 	"encoding/base64"
 	"encoding/hex"
+	"flag"
 	"log"
+	"net"
 	"net/http"
-	"os"
+	"net/netip"
+	"strconv"
+	"strings"
 
-	"github.com/elazarl/goproxy"
-	"github.com/joho/godotenv"
-	"golang.zx2c4.com/go118/netip"
 	"golang.zx2c4.com/wireguard/conn"
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/tun/netstack"
+	"gopkg.in/elazarl/goproxy.v1"
+	"gopkg.in/ini.v1"
 )
+
+//todo github release and autobuild
+
+func MustParseCIDR(s string) netip.Addr {
+	ip, _, err := net.ParseCIDR(s)
+	if err != nil {
+		panic(err)
+	}
+	nIp, err := netip.ParseAddr(ip.String())
+	if err != nil {
+		panic(err)
+	}
+	return nIp
+}
+
+func withoutEmpty(s []string) []string {
+	var r []string
+	for _, str := range s {
+		if str != "" {
+			r = append(r, str)
+		}
+	}
+	return r
+}
+
+func mapA[R netip.Addr | string](data []string, f func(string) R) []R {
+
+	mapped := make([]R, len(data))
+
+	for i, e := range data {
+		mapped[i] = f(e)
+	}
+
+	return mapped
+}
 
 func DecodeKey(s string) string {
 	b, err := base64.StdEncoding.DecodeString(s)
 	if err != nil {
-		log.Panicf("Error decoding either private or public key from base64: '%v'", err)
+		log.Panicf("Error decoding either preshared, private or public key from base64: '%v'", err)
 	}
 	return hex.EncodeToString(b)
 }
 
-func MustGetEnv(s string) string {
-	v, ok := os.LookupEnv(s)
-	if !ok {
-		log.Panicf("Could not read required environment variable '%v'", s)
-	}
-	return v
+type Peer struct {
+	PublicKey           string
+	PresharedKey        string
+	AllowedIPs          []string
+	Endpoint            string
+	PersistentKeepalive uint64
 }
 
-func GenerateConfig(privateKey, publicKey, endpoint string) string {
-	return `private_key=` + privateKey + `
-public_key=` + publicKey + `
-endpoint=` + endpoint + `
-allowed_ip=0.0.0.0/0`
+type Interface struct {
+	PrivateKey string
+	ListenPort uint64
+	Address    []string
+	DNS        []string
+}
+
+type Cfg struct {
+	Interface
+	Peer
+}
+
+func formatAllowed(addr string) string {
+	return "allowed_ip=" + addr
+}
+
+func tern(prefix string, s string) string {
+	if s == "" {
+		return ""
+	}
+	return prefix + "=" + s
+}
+
+func GenerateConfig(cfg *Cfg) string {
+	commands := []string{
+		tern("private_key", DecodeKey(cfg.PrivateKey)),
+		tern("public_key", DecodeKey(cfg.PublicKey)),
+		tern("preshared_key", DecodeKey(cfg.PresharedKey)),
+		tern("endpoint", cfg.Endpoint),
+	}
+	if cfg.PersistentKeepalive != 0 {
+		commands = append(commands, tern("persistent_keepalive_interval", strconv.FormatUint(cfg.PersistentKeepalive, 10)))
+	}
+	if cfg.ListenPort != 0 {
+		commands = append(commands, tern("listen_port", strconv.FormatUint(cfg.ListenPort, 10)))
+	}
+	commands = append(commands, mapA(withoutEmpty(cfg.AllowedIPs), formatAllowed)...)
+	return strings.Join(commands, "\n")
 }
 
 func main() {
-	log.Printf("Reading environment variables")
-	godotenv.Load()
-	var (
-		privateKey         = DecodeKey(MustGetEnv("WG_PRIVATE_KEY"))
-		publicKey          = DecodeKey(MustGetEnv("WG_PUBLIC_KEY"))
-		endpoint           = MustGetEnv("WG_ENDPOINT")
-		localIpV4Address   = MustGetEnv("WG_LOCAL_IPV4_ADDRESS")
-		dnsAddress         = MustGetEnv("WG_DNS_ADDRESS")
-		proxyListenAddress = MustGetEnv("PROXY_LISTEN_ADDRESS")
-	)
-	log.Printf("Finished reading configuration")
+
+	portPointer := flag.Uint64("p", 8087, "proxy port")
+	flag.Parse()
+
+	port := strconv.FormatUint(*portPointer, 10)
+
+	cfg := new(Cfg)
+	err := ini.MapTo(cfg, flag.Args()[0])
+
+	if err != nil {
+		log.Panicf("Fail to load file: %v", err)
+	}
+
+	//fmt.Printf("%+v\n", cfg)
+	//ip, _, err := net.ParseCIDR(cfg.Address[0])
+	//fmt.Printf("%+v\n", ip)
 
 	log.Printf("Creating TUN")
-	var (
-		localAddresses = []netip.Addr{netip.MustParseAddr(localIpV4Address)}
-		dnsAddresses   = []netip.Addr{netip.MustParseAddr(dnsAddress)}
-		tunMTU         = 1420
-	)
-	tun, tnet, err := netstack.CreateNetTUN(localAddresses, dnsAddresses, tunMTU)
+
+	tun, tnet, err := netstack.CreateNetTUN(mapA(withoutEmpty(cfg.Address), MustParseCIDR), mapA(withoutEmpty(cfg.DNS), netip.MustParseAddr), 1420)
 	if err != nil {
 		log.Panicf("Error creating TUN '%v'", err)
 	}
-	log.Printf("TUN created")
 
 	log.Printf("Setting up wireguard connection")
 	dev := device.NewDevice(tun, conn.NewStdNetBind(), device.NewLogger(device.LogLevelError, ""))
-	dev.IpcSet(GenerateConfig(privateKey, publicKey, endpoint))
+	dev.IpcSet(GenerateConfig(cfg))
 	dev.Up()
-	log.Printf("Connection created")
 
-	log.Printf("Starting proxy server on port %v", proxyListenAddress)
+	log.Printf("Starting proxy server on port %v", port)
 	proxy := goproxy.NewProxyHttpServer()
 	proxy.ConnectDial = tnet.Dial
 	proxy.Tr.Dial = tnet.Dial
-	//proxy.Verbose = true
-	log.Fatal(http.ListenAndServe(proxyListenAddress, proxy))
+	proxy.Verbose = true
+	log.Fatal(http.ListenAndServe(":"+port, proxy))
 }
