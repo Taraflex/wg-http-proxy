@@ -20,3 +20,5 @@ vendor
 *.conf
 
 todo
+
+wg-http-proxy*
