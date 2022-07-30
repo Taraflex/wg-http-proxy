@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -112,6 +113,7 @@ func GenerateConfig(cfg *Cfg) string {
 func main() {
 
 	portPointer := flag.Uint64("p", 8087, "proxy port")
+	verbose := flag.Bool("v", false, "log information on each request sent to the proxy")
 	flag.Parse()
 
 	port := strconv.FormatUint(*portPointer, 10)
@@ -123,7 +125,7 @@ func main() {
 		log.Panicf("Fail to load file: %v", err)
 	}
 
-	//fmt.Printf("%+v\n", cfg)
+	fmt.Printf("%+v\n", *verbose)
 	//ip, _, err := net.ParseCIDR(cfg.Address[0])
 	//fmt.Printf("%+v\n", ip)
 
@@ -143,6 +145,6 @@ func main() {
 	proxy := goproxy.NewProxyHttpServer()
 	proxy.ConnectDial = tnet.Dial
 	proxy.Tr.Dial = tnet.Dial
-	proxy.Verbose = true
+	proxy.Verbose = *verbose
 	log.Fatal(http.ListenAndServe(":"+port, proxy))
 }
