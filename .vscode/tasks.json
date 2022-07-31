@@ -7,6 +7,11 @@
             "label": "build",
             "type": "shell",
             "command": "go build -ldflags=\"-w -s\""
+        },
+        {
+            "label": "watch",
+            "type": "shell",
+            "command": "chokidar \"*.go\" --run-on-start --debounce 1000 -c \"pkill wg-proxer ; pkill go ; go build && wg-proxer wg0.conf\""
         }
     ]
 }

@@ -10,6 +10,6 @@ do
     echo $env
     export GOOS=$(echo $env | cut -f1 -d/)
     export GOARCH=$(echo $env | cut -f2 -d/)
-    export SUFFIX=$(echo $env | cut -f3 -d/)
+    SUFFIX=$(echo $env | cut -f3 -d/)
     go build -ldflags="-w -s" -o $APPNAME$SUFFIX . && tar -czf $APPNAME-$DATE_SUFFIX-$GITHUB_RUN_NUMBER-$GOOS-$GOARCH.tar.gz $APPNAME$SUFFIX README.md LICENSE
 done
