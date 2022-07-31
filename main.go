@@ -70,6 +70,7 @@ type Peer struct {
 type Interface struct {
 	PrivateKey string
 	ListenPort uint64
+	MTU        int
 	Address    []string
 	DNS        []string
 }
@@ -109,38 +110,46 @@ func GenerateConfig(cfg *Cfg) string {
 
 func main() {
 
-	portPointer := flag.Uint64("p", 8087, "proxy port")
-	verbose := flag.Bool("v", false, "log information on each request sent to the proxy")
+	portPointer := flag.Uint64("p", 8087, "Proxy port")
+	silent := flag.Bool("s", false, "Silent mode")
+	verbose := flag.Bool("v", false, "Log information on each request sent to the proxy")
 	flag.Parse()
-
-	port := strconv.FormatUint(*portPointer, 10)
 
 	cfg := new(Cfg)
 	err := ini.MapTo(cfg, flag.Args()[0])
-
 	if err != nil {
 		log.Panicf("Fail to load file: %v", err)
 	}
 
 	//ip, _, err := net.ParseCIDR(cfg.Address[0])
 	//fmt.Printf("%+v\n", ip)
-
-	log.Printf("Creating TUN")
-
-	tun, tnet, err := netstack.CreateNetTUN(mapA(withoutEmpty(cfg.Address), mustParseCIDR), mapA(withoutEmpty(cfg.DNS), netip.MustParseAddr), 1420)
+	if !*silent {
+		log.Printf("Creating TUN")
+	}
+	if cfg.MTU == 0 {
+		cfg.MTU = 1420
+	}
+	tun, tnet, err := netstack.CreateNetTUN(mapA(withoutEmpty(cfg.Address), mustParseCIDR), mapA(withoutEmpty(cfg.DNS), netip.MustParseAddr), cfg.MTU)
 	if err != nil {
 		log.Panicf("Error creating TUN '%v'", err)
 	}
 
-	log.Printf("Setting up wireguard connection")
+	if !*silent {
+		log.Printf("Setting up wireguard connection")
+	}
 	dev := device.NewDevice(tun, conn.NewStdNetBind(), device.NewLogger(device.LogLevelError, ""))
 	dev.IpcSet(GenerateConfig(cfg))
 	dev.Up()
 
-	log.Printf("Starting proxy server on port %v", port)
+	port := strconv.FormatUint(*portPointer, 10)
+	if !*silent {
+		log.Printf("Starting proxy server on port %v", port)
+	}
 	proxy := goproxy.NewProxyHttpServer()
 	proxy.ConnectDial = tnet.Dial
 	proxy.Tr.Dial = tnet.Dial
-	proxy.Verbose = *verbose
+	if !*silent {
+		proxy.Verbose = *verbose
+	}
 	log.Fatal(http.ListenAndServe(":"+port, proxy))
 }
