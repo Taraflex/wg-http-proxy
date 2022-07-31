@@ -1,51 +1,75 @@
-[![Build & Publish Docker Image](https://github.com/shimberger/wg-http-proxy/actions/workflows/docker-image.yml/badge.svg)](https://github.com/shimberger/wg-http-proxy/actions/workflows/docker-image.yml)
+# wg-proxer
 
-# wg-http-proxy
+Портабельный WireGuard клиент предоставляюший HTTP прокси сервер 
 
-This project hacks together the excellent https://github.com/elazarl/goproxy and https://git.zx2c4.com/wireguard-go into an HTTP proxy server which tunnels requests through wireguard.
-I needed it for a quick project but it has NOT been audited for privacy leaks. 
+## Цель
 
-DO NOT USE THIS IF YOUR PRIVACY DEPENDS ON IT.
+WireGuard (как и иные vpn клиенты) хорош когда требуется завернуть большую часть трафика на всем устройстве, но не так удобен для оборачивания трафика в отдельных программах и/или к отдельным ресурсам. 
 
-## State of development
+Наиболее гибким в этом отношении является HTTP прокси (через PAC скрипты), однако браузеры не умеют даже в Basic авторизацию для HTTP прокси.
 
-This was written in an evening to do exactly what I needed it to do. The vendoring was necessary to fix some compile errors but I suspect it will be obsolete pretty soon.
+Данный проект - попытка заткнуть слабые места обоих решений.
+По сети гоняется защищенный WireGuard трафик, а на клиентском устройстве запускается прокси сервер доступный приложениям. 
 
-## Usage
+## Установка
 
-You can use the following environment variables to configure the tunnel either via `.env` file or normal environment variables:
+Установка не требуется. 
+[Просто скачайте версию под свою систему](https://github.com/Taraflex/wg-proxer/releases/tag/latest) и запускайте хоть с флешки.
 
+## Как использовать
+
+`wg-proxer.exe -p 8087 wg.conf`
+- `-p 8087` локальный прокси порт 
+- `-s` выключает логгирование
+- `-v` включает логгирование запросов
+- `wg.conf` ПОСЛЕДНИМ параметром указываем путь к конфигу Wireguard (имя файла может быть любое)
+
+### Пример wg конфига
+
+```ini
+[Interface]
+PrivateKey = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+Address = 10.8.0.5/24
+DNS = 8.8.8.8, 8.8.4.4
+
+[Peer]
+PublicKey = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+PresharedKey = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+AllowedIPs = 192.168.0.0/16, 0.0.0.0/5, 213.5.120.3/32
+Endpoint = x.x.x.x:2022
+PersistentKeepalive = 25
 ```
-WG_PUBLIC_KEY=<base64-encoded-key>
-WG_PRIVATE_KEY=<base64-encoded-key>
-WG_LOCAL_IPV4_ADDRESS=<ip>
-WG_DNS_ADDRESS=<ip>
-WG_ENDPOINT=<ip>:<port>
-PROXY_LISTEN_ADDRESS=:8080
+**ВНИМАНИЕ для полей разрешающих множественные значения допускается только синтаксис с перечислением значений через зяпятую, но не дубликаты ключей.**
+```ini
+;;так нельзя
+DNS = 8.8.8.8
+DNS = 8.8.4.4
+```
+```ini
+;;так можно
+DNS = 8.8.8.8, 8.8.4.4
 ```
 
-## License
+## Что не так с настройкой Address
 
-```
-MIT License
+Маски на данный момент просто игнорируются.
 
-Copyright (c) 2021 Sebastian Himberger
+Я не понял как прикрутить диапазон по маске. В https://github.com/octeep/wireproxy (что работает на основе той же библиотеки) автор например велел указывать маски /32 /128 и сделал вид что все работает - мы поступим также. 
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+## Демонизация
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+- Windows - [проще всего использовать nssm](https://nssm.cc/usage)
+- Linux - Используйте systemd 
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+## Похожие проекты и недостатки
+
+- https://github.com/samhza/wg-tcp-proxy - не умеет читать WireGuard конфиги, мало параметров конфигурации
+- https://github.com/shimberger/wg-http-proxy - не умеет читать WireGuard конфиги, мало параметров конфигурации
+- https://github.com/zhsj/wghttp - не умеет читать WireGuard конфиги, не умеет менять AllowedIPs, MTU, PersistentKeepalive, ListenPort  (но есть иные плюшки https://github.com/zhsj/wghttp/blob/master/docs/usage.md - если бы стразу нашел этот проект, то не писал бы свой)
+- https://github.com/octeep/wireproxy - может все что мне требовалось, но запускает SOCKS5 
+
+## Полезное
+
+- [Обход блокировок РКН](./PKH.md)
+- [Калькулятор AllowedIPs](https://www.procustodibus.com/blog/2021/03/wireguard-allowedips-calculator/)
+- [Список специальных ip](https://blog.bullspit.co.uk/2016/11/15/public-internet-ipv4-prefixes/) - если добавить в AllowedIPs то решаться проблемы с доступом к локальным ресурсам

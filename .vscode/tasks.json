@@ -6,7 +6,7 @@
         {
             "label": "build",
             "type": "shell",
-            "command": "go build -ldflags=\"-w -s\" -o wg-http-proxy.exe"
+            "command": "go build -ldflags=\"-w -s\""
         }
     ]
 }

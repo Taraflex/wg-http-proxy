@@ -1,4 +1,4 @@
-module github.com/Taraflex/wg-http-proxy
+module github.com/Taraflex/wg-proxer
 
 go 1.18
 
