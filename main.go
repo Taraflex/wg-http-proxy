@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"flag"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -92,6 +93,7 @@ func tern(prefix string, s string) string {
 }
 
 func GenerateConfig(cfg *Cfg) string {
+	// https://www.wireguard.com/xplatform/#configuration-protocol
 	commands := []string{
 		tern("private_key", DecodeKey(cfg.PrivateKey)),
 		tern("public_key", DecodeKey(cfg.PublicKey)),
@@ -121,8 +123,6 @@ func main() {
 		log.Panicf("Fail to load file: %v", err)
 	}
 
-	//ip, _, err := net.ParseCIDR(cfg.Address[0])
-	//fmt.Printf("%+v\n", ip)
 	if !*silent {
 		log.Printf("Creating TUN")
 	}
@@ -148,7 +148,9 @@ func main() {
 	proxy := goproxy.NewProxyHttpServer()
 	proxy.ConnectDial = tnet.Dial
 	proxy.Tr.Dial = tnet.Dial
-	if !*silent {
+	if *silent {
+		proxy.Logger.SetOutput(io.Discard)
+	} else {
 		proxy.Verbose = *verbose
 	}
 	log.Fatal(http.ListenAndServe(":"+port, proxy))
