@@ -3,14 +3,15 @@ package main
 import (
 	"encoding/base64"
 	"encoding/hex"
-	"flag"
-	"io"
 	"log"
 	"net"
 	"net/http"
 	"net/netip"
+	"net/url"
+	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.zx2c4.com/wireguard/conn"
 	"golang.zx2c4.com/wireguard/device"
@@ -31,31 +32,24 @@ func mustParseCIDR(s string) netip.Addr {
 	return nIp
 }
 
-func withoutEmpty(s []string) []string {
-	var r []string
-	for _, str := range s {
-		if str != "" {
-			r = append(r, str)
-		}
-	}
-	return r
-}
-
-func mapA[R netip.Addr | string](data []string, f func(string) R) []R {
+func mapNoneEmpty[R netip.Addr | string](data []string, f func(string) R) []R {
 
 	mapped := make([]R, len(data))
-
-	for i, e := range data {
-		mapped[i] = f(e)
+	i := 0
+	for _, e := range data {
+		if e != "" {
+			mapped[i] = f(e)
+			i++
+		}
 	}
 
-	return mapped
+	return mapped[:i]
 }
 
 func DecodeKey(s string) string {
 	b, err := base64.StdEncoding.DecodeString(s)
 	if err != nil {
-		log.Panicf("Error decoding either preshared, private or public key from base64: '%v'", err)
+		log.Fatalf("Error decoding either preshared, private or public key from base64: '%v'", err)
 	}
 	return hex.EncodeToString(b)
 }
@@ -81,10 +75,6 @@ type Cfg struct {
 	Peer
 }
 
-func formatAllowed(addr string) string {
-	return "allowed_ip=" + addr
-}
-
 func tern(prefix string, s string) string {
 	if s == "" {
 		return ""
@@ -94,64 +84,100 @@ func tern(prefix string, s string) string {
 
 func GenerateConfig(cfg *Cfg) string {
 	// https://www.wireguard.com/xplatform/#configuration-protocol
+	// todo add all possible settings
+	//todo set array cap
 	commands := []string{
-		tern("private_key", DecodeKey(cfg.PrivateKey)),
-		tern("public_key", DecodeKey(cfg.PublicKey)),
-		tern("preshared_key", DecodeKey(cfg.PresharedKey)),
-		tern("endpoint", cfg.Endpoint),
+		tern("private_key", DecodeKey(cfg.PrivateKey)),     //todo required
+		tern("public_key", DecodeKey(cfg.PublicKey)),       //todo required
+		tern("preshared_key", DecodeKey(cfg.PresharedKey)), //todo optional
+		tern("endpoint", cfg.Endpoint),                     //todo required
 	}
 	if cfg.PersistentKeepalive != 0 {
-		commands = append(commands, tern("persistent_keepalive_interval", strconv.FormatUint(cfg.PersistentKeepalive, 10)))
+		commands = append(commands, "persistent_keepalive_interval="+strconv.FormatUint(cfg.PersistentKeepalive, 10))
 	}
 	if cfg.ListenPort != 0 {
-		commands = append(commands, tern("listen_port", strconv.FormatUint(cfg.ListenPort, 10)))
+		commands = append(commands, "listen_port="+strconv.FormatUint(cfg.ListenPort, 10))
 	}
-	commands = append(commands, mapA(withoutEmpty(cfg.AllowedIPs), formatAllowed)...)
+	commands = append(commands, mapNoneEmpty(cfg.AllowedIPs, func(addr string) string {
+		return "allowed_ip=" + addr
+	})...)
 	return strings.Join(commands, "\n")
 }
 
 func main() {
+	lg := log.New(os.Stdout, "", log.LstdFlags)
 
-	portPointer := flag.Uint64("p", 8087, "Proxy port")
-	silent := flag.Bool("s", false, "Silent mode")
-	verbose := flag.Bool("v", false, "Log information on each request sent to the proxy")
-	flag.Parse()
-
-	cfg := new(Cfg)
-	err := ini.MapTo(cfg, flag.Args()[0])
+	cli, err := ParseFlags()
 	if err != nil {
-		log.Panicf("Fail to load file: %v", err)
+		lg.Fatalf("Fail to parse cli args: %v", err)
 	}
 
-	if !*silent {
-		log.Printf("Creating TUN")
+	cfg := &Cfg{}
+	err = ini.MapTo(cfg, cli.ConfigFile) //todo allow load from env
+	if err != nil {
+		lg.Fatalf("Fail to load file: %v", err)
 	}
+
+	lg.Println("Creating TUN")
+
 	if cfg.MTU == 0 {
 		cfg.MTU = 1420
 	}
-	tun, tnet, err := netstack.CreateNetTUN(mapA(withoutEmpty(cfg.Address), mustParseCIDR), mapA(withoutEmpty(cfg.DNS), netip.MustParseAddr), cfg.MTU)
+	tun, tnet, err := netstack.CreateNetTUN(mapNoneEmpty(cfg.Address, mustParseCIDR), mapNoneEmpty(cfg.DNS, netip.MustParseAddr), cfg.MTU)
 	if err != nil {
-		log.Panicf("Error creating TUN '%v'", err)
+		lg.Fatalf("Error creating TUN '%v'", err)
 	}
 
-	if !*silent {
-		log.Printf("Setting up wireguard connection")
-	}
-	dev := device.NewDevice(tun, conn.NewStdNetBind(), device.NewLogger(device.LogLevelError, ""))
-	dev.IpcSet(GenerateConfig(cfg))
-	dev.Up()
+	lg.Println("Setting up wireguard connection")
 
-	port := strconv.FormatUint(*portPointer, 10)
-	if !*silent {
-		log.Printf("Starting proxy server on port %v", port)
+	dev := device.NewDevice(tun, conn.NewStdNetBind(), device.NewLogger(device.LogLevelError, "")) //todo logger
+	err = dev.IpcSet(GenerateConfig(cfg))
+	if err != nil {
+		lg.Fatal(err)
 	}
-	proxy := goproxy.NewProxyHttpServer()
-	proxy.ConnectDial = tnet.Dial
-	proxy.Tr.Dial = tnet.Dial
-	if *silent {
+	err = dev.Up()
+	if err != nil {
+		lg.Fatal(err)
+	}
+
+	lg.Println("Starting proxy server on port", cli.Port)
+
+	proxyUrl, _ := url.Parse("http://127.0.0.1:" + cli.SPort())
+	proxy := &goproxy.ProxyHttpServer{
+		Verbose: true,
+		Logger:  lg,
+		NonproxyHandler: http.HandlerFunc(ProxyHandler(http.Client{
+			Timeout:   4 * time.Minute,
+			Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)},
+		})),
+		Tr: &http.Transport{
+			Dial:        tnet.Dial,
+			DialContext: tnet.DialContext,
+			//TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+		ConnectDial: tnet.Dial,
+	}
+
+	//debug.ReadBuildInfo();
+
+	/*if *silent {
 		proxy.Logger.SetOutput(io.Discard)
 	} else {
 		proxy.Verbose = *verbose
+	}*/
+
+	go func() {
+		lg.Fatal(http.ListenAndServe(":"+cli.SPort(), proxy))
+	}()
+	res, err := http.Head("http://127.0.0.1:" + cli.SPort() + "/health") //todo check some host like google
+	if err != nil || res == nil {
+		lg.Fatalf("Can't check if proxy server started '%v'", err)
+	} else if res.StatusCode == 204 {
+		lg.Println("Server started")
+	} else {
+		lg.Fatalf("Can't check if proxy server started '%v'", res.Status)
 	}
-	log.Fatal(http.ListenAndServe(":"+port, proxy))
+	if !cli.StartAndExit {
+		select {}
+	}
 }

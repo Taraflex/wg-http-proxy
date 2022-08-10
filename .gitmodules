@@ -1,3 +1,6 @@
 [submodule "mo"]
 	path = mo
 	url = https://github.com/tests-always-included/mo.git
+[submodule "antizapret-pac-generator-light"]
+	path = antizapret-pac-generator-light
+	url = https://bitbucket.org/anticensority/antizapret-pac-generator-light.git

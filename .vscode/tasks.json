@@ -4,14 +4,19 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "pkill",
+            "type": "shell",
+            "command": "pkill wg-proxer ; pkill __debug_bin"
+        },
+        {
+            "label": "nodemon",
+            "type": "shell",
+            "command": "nodemon -e go --exec \"pkill wg-proxer ; go build && wg-proxer -p 41970 wg0.conf\""
+        },
+        {
             "label": "build",
             "type": "shell",
             "command": "go build -ldflags=\"-w -s\""
-        },
-        {
-            "label": "watch",
-            "type": "shell",
-            "command": "chokidar \"*.go\" --run-on-start --debounce 1000 -c \"pkill wg-proxer ; pkill go ; go build && wg-proxer wg0.conf\""
         }
     ]
 }

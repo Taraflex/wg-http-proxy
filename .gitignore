@@ -1,4 +1,6 @@
 vendor
 *.conf
+*.exe
 todo
+__debug_bin
 *wg-proxer*
