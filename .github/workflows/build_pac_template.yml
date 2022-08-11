@@ -25,3 +25,7 @@ jobs:
 
       - name: ls
         run: ls ./antizapret-pac-generator-light/result
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 15
