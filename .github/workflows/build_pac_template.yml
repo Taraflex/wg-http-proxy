@@ -21,10 +21,7 @@ jobs:
         run: sudo apt-get install -y sipcalc curl gawk idn python3-dnspython
      
       - name: Generate pac
-        run: sudo update-alternatives --install /usr/local/bin/awk awk /usr/bin/gawk 1 && echo > ./antizapret-pac-generator-light/config/exclude-hosts-dist.txt && bash ./antizapret-pac-generator-light/doall.sh
-
-      - name: ls
-        run: ls ./antizapret-pac-generator-light/result
+        run: cd ./antizapret-pac-generator-light && update-alternatives --install /usr/local/bin/awk awk /usr/bin/gawk 1 && echo > ./config/exclude-hosts-dist.txt && sed -i 's/\\\_/_/' parse.sh && bash ./doall.sh && ls result
 
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
