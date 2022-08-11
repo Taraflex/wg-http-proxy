@@ -32,7 +32,7 @@ jobs:
         run: sudo apt-get install -y sipcalc curl gawk idn python3-dnspython
 
       - name: Generate pac
-        run: cp -f -T .github/workflows/config.sh ./antizapret-pac-generator-light/config/config.sh && cd ./antizapret-pac-generator-light && sudo update-alternatives --set awk $(update-alternatives --list awk | grep gawk) && echo > ./config/exclude-hosts-dist.txt && sed -i 's/\\\_/_/' parse.sh && bash ./doall.sh && bash ./generate-pac.sh && tar --directory ./result -cvf ${{ runner.temp }}/artifact.tar proxy.pac.mustache
+        run: cp -f -T .github/workflows/config.sh ./antizapret-pac-generator-light/config/config.sh && cd ./antizapret-pac-generator-light && sudo update-alternatives --set awk $(update-alternatives --list awk | grep gawk) && echo > ./config/exclude-hosts-dist.txt && sed -i 's/\\\_/_/' parse.sh && bash ./doall.sh && bash ./generate-pac.sh && tar --dereference --hard-dereference --directory ./result -cvf ${{ runner.temp }}/artifact.tar proxy.pac.mustache
 
       - name: Setup Pages
         uses: actions/configure-pages@v1
