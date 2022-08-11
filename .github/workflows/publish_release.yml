@@ -6,12 +6,16 @@ on:
     tags:
       - '*'
 
+concurrency:
+  group: "publish_release"
+  cancel-in-progress: true
+
 jobs:
   build-linux:
 
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
 
@@ -21,7 +25,7 @@ jobs:
           go-version: '1.18.4'
           cache: true
       
-      - run: bash ./publish_release.sh
+      - run: bash .github/workflows/publish_release.sh
 
       - name: Release
         uses: "ncipollo/release-action@v1.8.5"

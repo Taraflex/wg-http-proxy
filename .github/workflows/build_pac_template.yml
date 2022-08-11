@@ -3,12 +3,23 @@ name: build_pac_template
 on: 
   workflow_dispatch: {}
 
+concurrency:
+  group: "build_pac_template"
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   build-linux:
-
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
 
@@ -20,9 +31,23 @@ jobs:
       - name: Set up tools
         run: sudo apt-get install -y sipcalc curl gawk idn python3-dnspython
      
-      - name: Generate pac
-        run: cd ./antizapret-pac-generator-light && sudo update-alternatives --set awk $(update-alternatives --list awk | grep gawk) && echo > ./config/exclude-hosts-dist.txt && sed -i 's/\\\_/_/' parse.sh && bash ./doall.sh && bash ./generate-pac.sh && ls result
+      - name: Move config 
+        run: cp -f -T .github/workflows/config.sh ./antizapret-pac-generator-light/config/config.sh
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        timeout-minutes: 20
+      - name: Generate pac
+        run: cd ./antizapret-pac-generator-light && sudo update-alternatives --set awk $(update-alternatives --list awk | grep gawk) && echo > ./config/exclude-hosts-dist.txt && sed -i 's/\\\_/_/' parse.sh && bash ./doall.sh && bash ./generate-pac.sh && tar -cvf ${{ runner.temp }}/artifact.tar proxy.pac.mustache
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v1
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@main
+        with:
+          name: github-pages
+          path: ${{ runner.temp }}/artifact.tar
+          retention-days: 1
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
+
