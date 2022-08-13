@@ -172,7 +172,7 @@ func main() {
 	res, err := http.Head("http://127.0.0.1:" + cli.SPort() + "/health") //todo check some host like google
 	if err != nil || res == nil {
 		lg.Fatalf("Can't check if proxy server started '%v'", err)
-	} else if res.StatusCode == 204 {
+	} else if res.StatusCode == http.StatusNoContent {
 		lg.Println("Server started")
 	} else {
 		lg.Fatalf("Can't check if proxy server started '%v'", res.Status)

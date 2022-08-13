@@ -3,6 +3,8 @@ module github.com/Taraflex/wg-proxer
 go 1.18
 
 require (
+	github.com/andybalholm/brotli v1.0.4
+	github.com/cbroglie/mustache v1.4.0
 	golang.zx2c4.com/wireguard v0.0.0-20220703234212-c31a7b1ab478
 	golang.zx2c4.com/wireguard/tun/netstack v0.0.0-20220316235147-5aff28b14c24
 	gopkg.in/elazarl/goproxy.v1 v1.0.0-20180725130230-947c36da3153

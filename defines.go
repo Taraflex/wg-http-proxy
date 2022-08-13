@@ -2,8 +2,15 @@ package main
 
 import (
 	"runtime"
+	"runtime/debug"
+	"strings"
 )
 
-const AppName = "{{APPNAME}}"
-const Version = "{{GITHUB_REF_NAME}}"
-const Arch = runtime.GOOS + "/" + runtime.GOARCH //todo load info from debug.ReadBuildInfo() https://icinga.com/blog/2022/05/25/embedding-git-commit-information-in-go-binaries/
+var info, _ = debug.ReadBuildInfo()
+var parts = strings.Split(info.Main.Path, "/")
+
+var AppName = parts[len(parts)-1]
+var GithubPacUrl = "https://" + strings.ToLower(parts[1]) + ".github.io/" + AppName + "/pac.js.br"
+var Version = info.Main.Version
+
+const Arch = runtime.GOOS + "/" + runtime.GOARCH
