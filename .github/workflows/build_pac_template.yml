@@ -29,17 +29,11 @@ jobs:
           python-version: '3.10'
 
       - name: Set up tools
-        run: sudo apt-get install -y sipcalc curl gawk idn python3-dnspython
+        run: sudo apt-get install -y sipcalc curl gawk idn python3-dnspython brotli
 
       - name: Generate pac
         run: bash .github/workflows/generate-pac.sh
-
-      - name: Brotli compress the html, css and js files
-        id: brotli
-        uses: charlesworth/compress-action@1.0
-        with:
-          target-directory: 'result'
-
+        
       - name: Make artifact
         run: tar --dereference --hard-dereference --directory ./result -cvf ${{ runner.temp }}/artifact.tar --exclude=.git --exclude=.github .
 

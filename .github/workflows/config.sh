@@ -9,8 +9,8 @@ PACPROXYHOST='{{{PACPROXYHOST}}}'
 # Facebook and Twitter proxy address
 PACFBTWHOST='{{{PACFBTWHOST}}}'
 
-PACFILE="result/proxy-ssl.pac.js"
-PACFILE_NOSSL="../result/proxy.pac.js"
+PACFILE="result/pac-ssl.js"
+PACFILE_NOSSL="../result/pac.js"
 
 # Perform DNS resolving to detect and filter non-existent domains
 RESOLVE_NXDOMAIN="no"

@@ -10,3 +10,6 @@ echo > ./config/exclude-hosts-dist.txt
 sed -i 's/\\\_/_/' parse.sh
 bash ./doall.sh
 bash ./generate-pac.sh
+
+source config/config.sh
+brotli -kf $PACFILE_NOSSL -o $PACFILE_NOSSL.br
