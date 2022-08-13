@@ -32,22 +32,22 @@ jobs:
         run: sudo apt-get install -y sipcalc curl gawk idn python3-dnspython
 
       - name: Generate pac
-        run: cp -f -T .github/workflows/config.sh ./antizapret-pac-generator-light/config/config.sh && cd ./antizapret-pac-generator-light && sudo update-alternatives --set awk $(update-alternatives --list awk | grep gawk) && echo > ./config/exclude-hosts-dist.txt && sed -i 's/\\\_/_/' parse.sh && bash ./doall.sh && bash ./generate-pac.sh && tar --dereference --hard-dereference --directory ./result -cvf ${{ runner.temp }}/artifact.tar proxy.pac.mustache
+        run: bash .github/workflows/generate-pac.sh && tar --dereference --hard-dereference --directory ./result -cvf ${{ runner.temp }}/artifact.tar --exclude=.git --exclude=.github .
 
       - name: Setup Pages
         uses: actions/configure-pages@v1
 
-      # - name: Upload artifact
-      #   uses: actions/upload-artifact@main
-      #   with:
-      #     name: github-pages
-      #     path: ${{ runner.temp }}/artifact.tar
-      #     retention-days: 1
-
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-artifact@main
         with:
-          path: './antizapret-pac-generator-light/result'
+          name: github-pages
+          path: ${{ runner.temp }}/artifact.tar
+          retention-days: 1
+
+      # - name: Upload artifact
+      #   uses: actions/upload-pages-artifact@v1
+      #   with:
+      #     path: './antizapret-pac-generator-light/result'
 
       - name: Deploy to GitHub Pages
         id: deployment

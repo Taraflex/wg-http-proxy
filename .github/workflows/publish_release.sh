@@ -1,3 +1,7 @@
+#!/bin/bash
+
+set -e
+
 chmod +x ./mo/mo
 mv defines.go defines.go.mustache 
 
