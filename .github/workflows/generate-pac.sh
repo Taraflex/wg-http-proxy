@@ -8,6 +8,7 @@ cd ./antizapret-pac-generator-light
 sudo update-alternatives --set awk $(update-alternatives --list awk | grep gawk)
 #echo > ./config/exclude-hosts-dist.txt
 sed -i 's/\\\_/_/' parse.sh
+pip install dnspython
 bash ./doall.sh
 bash ./generate-pac.sh
 
