@@ -37,12 +37,17 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v1
 
+      # - name: Upload artifact
+      #   uses: actions/upload-artifact@main
+      #   with:
+      #     name: github-pages
+      #     path: ${{ runner.temp }}/artifact.tar
+      #     retention-days: 1
+
       - name: Upload artifact
-        uses: actions/upload-artifact@main
+        uses: actions/upload-pages-artifact@v1
         with:
-          name: github-pages
-          path: ${{ runner.temp }}/artifact.tar
-          retention-days: 1
+          path: './antizapret-pac-generator-light/result'
 
       - name: Deploy to GitHub Pages
         id: deployment
