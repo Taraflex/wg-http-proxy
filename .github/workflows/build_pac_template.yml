@@ -1,7 +1,16 @@
 name: build_pac_template
 
 on: 
-  workflow_dispatch: {}
+  workflow_dispatch: 
+    inputs:
+      RESOLVE_NXDOMAIN:
+        description: 'Perform DNS resolving to detect and filter non-existent domains'
+        required: true
+        default: 'yes'
+        type: choice
+        options:
+          - yes
+          - no
 
 concurrency:
   group: "build_pac_template"
@@ -38,6 +47,8 @@ jobs:
 
       - name: Generate pac
         run: bash .github/workflows/generate-pac.sh
+        env:
+          RESOLVE_NXDOMAIN: ${{ inputs.RESOLVE_NXDOMAIN }}
         
       - name: Make artifact
         run: tar --dereference --hard-dereference --directory ./result -cvf ${{ runner.temp }}/artifact.tar --exclude=.git --exclude=.github .
