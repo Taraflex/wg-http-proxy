@@ -8,9 +8,7 @@ on:
         required: true
         default: 'yes'
         type: choice
-        options:
-          - yes
-          - no
+        options: ['yes', 'no']
 
 concurrency:
   group: "build_pac_template"
