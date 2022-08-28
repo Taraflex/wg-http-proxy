@@ -2,9 +2,6 @@ name: publish_release
 
 on:
   workflow_dispatch: {}
-  push:
-    tags:
-      - '*'
 
 concurrency:
   group: "publish_release"

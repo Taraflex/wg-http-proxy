@@ -13,4 +13,5 @@ bash ./doall.sh
 bash ./generate-pac.sh
 
 source config/config.sh
+npx terser $PACFILE_NOSSL --ecma 5 --toplevel --mangle reserved=FindProxyForURL -o $PACFILE_NOSSL
 brotli -kf $PACFILE_NOSSL -o $PACFILE_NOSSL.br
