@@ -13,4 +13,4 @@ PACFILE="result/pac-ssl.js"
 PACFILE_NOSSL="../result/pac.js"
 
 # Perform DNS resolving to detect and filter non-existent domains
-RESOLVE_NXDOMAIN="yes"
+RESOLVE_NXDOMAIN="no"
