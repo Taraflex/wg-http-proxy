@@ -52,11 +52,6 @@ jobs:
           path: ${{ runner.temp }}/artifact.tar
           retention-days: 1
 
-      # - name: Upload artifact
-      #   uses: actions/upload-pages-artifact@v1
-      #   with:
-      #     path: './antizapret-pac-generator-light/result'
-
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@main

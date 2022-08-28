@@ -13,5 +13,11 @@ bash ./doall.sh
 bash ./generate-pac.sh
 
 source config/config.sh
-npx terser $PACFILE_NOSSL --ecma 5 --toplevel --mangle reserved=FindProxyForURL -o $PACFILE_NOSSL
+
+PACFILE_NOSSL_MIN="${PACFILE_NOSSL%.*}.min.js"
+
+npx terser $PACFILE_NOSSL --ecma 5 --toplevel --mangle reserved=[FindProxyForURL] -o $PACFILE_NOSSL_MIN
+sed -i "1s/^/\/\/ Generated on $(date --utc)\n/" $PACFILE_NOSSL_MIN
+
+brotli -kf $PACFILE_NOSSL_MIN.js -o $PACFILE_NOSSL_MIN.br
 brotli -kf $PACFILE_NOSSL -o $PACFILE_NOSSL.br
