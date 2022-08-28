@@ -3,6 +3,9 @@
 set -e
 
 cp -f -T .github/workflows/config.sh ./antizapret-pac-generator-light/config/config.sh
+
+export RESOLVE_NXDOMAIN="${RESOLVE_NXDOMAIN:-yes}"
+
 mkdir -p ./result
 cd ./antizapret-pac-generator-light
 sudo update-alternatives --set awk $(update-alternatives --list awk | grep gawk)
