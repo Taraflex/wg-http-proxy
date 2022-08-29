@@ -9,17 +9,22 @@ import (
 	"strings"
 )
 
+func getFields[T any](i *T) string {
+	v := reflect.ValueOf(i).Elem().Type()
+	n := v.NumField()
+	r := make([]string, n)
+	for i := 0; i < n; i++ {
+		r[i] = strings.ToLower(v.Field(i).Name)
+	}
+	return strings.Join(r, ", ")
+}
+
 var LogLevel = struct {
 	FATAL uint64
 	ERROR uint64
 	INFO  uint64
 	DEBUG uint64
-}{
-	FATAL: 0b1,
-	ERROR: 0b11,
-	INFO:  0b1111,
-	DEBUG: 0b11111,
-}
+}{0b1, 0b11, 0b111, 0b1111}
 
 type Cli struct {
 	ConfigFile   string
@@ -40,10 +45,11 @@ func ParseFlags() (Cli, error) {
 	}
 
 	var cli Cli
+	validLogLevels := getFields(&LogLevel)
 
 	flag.Uint64Var(&cli.Port, "p", 41970, "Proxy port [0-49151]")
 	var ll string
-	flag.StringVar(&ll, "l", "info", "LogLevel: [debug, info, error, fatal]")
+	flag.StringVar(&ll, "l", "info", "LogLevel: ["+validLogLevels+"]")
 	flag.BoolVar(&cli.StartAndExit, "x", false, "exit app after proxy server started")
 	flag.Parse()
 
@@ -57,7 +63,7 @@ func ParseFlags() (Cli, error) {
 	}
 	v := reflect.ValueOf(LogLevel).FieldByName(strings.ToUpper(ll))
 	if v.Kind() == 0 {
-		return cli, errors.New("logLevel must be one of [debug, info, error, fatal]")
+		return cli, errors.New("logLevel must be one of [" + validLogLevels + "]")
 	}
 	cli.LogLevel = v.Uint()
 	return cli, nil
